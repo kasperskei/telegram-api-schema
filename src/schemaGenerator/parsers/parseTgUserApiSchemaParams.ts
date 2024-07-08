@@ -1,18 +1,19 @@
-import { TgUserApiJSONSchemaParam } from '../types/TgUserApiJSONSchema';
-import { TgUserApiSchemaParam } from '../types/TgUserApiSchema';
-import { parseTgUserApiTypeName } from './parseTgUserApiTypeName';
+import {TgUserApiJSONSchemaParam} from '@/schemaGenerator/types/TgUserApiJSONSchema.ts'
+import {TgUserApiSchemaParam} from '@/schemaGenerator/types/TgUserApiSchema.ts'
+import {parseTgUserApiTypeName} from '@/schemaGenerator/parsers/parseTgUserApiTypeName.ts'
 
 export const parseTgUserApiSchemaParams = (params: TgUserApiJSONSchemaParam[]): TgUserApiSchemaParam[] => params
-    .filter(({ type }) => type !== '#')
-    .map((param) => {
-        const {
-            isMaybe,
-            typeName,
-        } = parseTgUserApiTypeName(param.type);
+  .filter(({type}) => type !== '#')
+  .map((param) => {
+    const {
+      isMaybe,
+      typeName,
+    } = parseTgUserApiTypeName(param.type)
 
-        return {
-            isMaybe,
-            propName: param.name,
-            typeName,
-        };
-    });
+    return {
+      description: '',
+      isMaybe,
+      propName: param.name,
+      typeName,
+    }
+  })

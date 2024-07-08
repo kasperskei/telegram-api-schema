@@ -1,3 +1,3 @@
-import { generateTgUserApiSchemaMethods } from './schemaGenerator/generateTgUserApiSchemaMethods';
+import {generateTgUserApiSchemaMethods} from './schemaGenerator/generateTgUserApiSchemaMethods'
 
-generateTgUserApiSchemaMethods();
+generateTgUserApiSchemaMethods()
