@@ -1,37 +1,37 @@
-export interface TgUserApiRequestResponseSuccess<Data = any> {
-    success: true
-    data: Data
-    error: undefined
+export interface TgUserApiRequestResponseSuccess<Data = unknown> {
+  success: true
+  data: Data
+  error: undefined
 }
 
 export interface TgUserApiRequestResponseError {
-    success: false
-    data: undefined
-    error: any
+  success: false
+  data: undefined
+  error: unknown
 }
 
-export type TgUserApiRequestResponse<Data = any> = TgUserApiRequestResponseSuccess<Data> | TgUserApiRequestResponseError;
+export type TgUserApiRequestResponse<Data = unknown> = TgUserApiRequestResponseSuccess<Data> | TgUserApiRequestResponseError
 
 export interface TgUserApiRequest {
-    (method: string, params: any, ...args: any[]): Promise<any>
+  (method: string, params: unknown, ...args: unknown[]): Promise<unknown>
 }
 
 export interface TgUserApiDependencies {
-    request: TgUserApiRequest
+  request: TgUserApiRequest
 }
 
-export const tgUserApiRequest = (dependencies: TgUserApiDependencies) => async <Data = any>(method: string, params: any, ...args: any[]): Promise<TgUserApiRequestResponse<Data>> => dependencies.request(method, params, ...args)
-    .then((data: any) => ({
-        success: true,
-        data,
-        error: undefined,
-    }))
-    .catch((e) => {
-        e.message = `tgUserApiRequest: ${e.message} ${JSON.stringify(params)}`;
+export const tgUserApiRequest = (dependencies: TgUserApiDependencies) => async <Data = unknown>(method: string, params: unknown, ...args: unknown[]): Promise<TgUserApiRequestResponse<Data>> => dependencies.request(method, params, ...args)
+  .then((data: unknown) => ({
+    success: true,
+    data,
+    error: undefined,
+  } as TgUserApiRequestResponseSuccess<Data>))
+  .catch((error) => {
+    error.message = `tgUserApiRequest: ${error.message} ${JSON.stringify(params)}`
 
-        return {
-            success: false,
-            data: undefined,
-            error: e,
-        };
-    });
+    return {
+      success: false,
+      data: undefined,
+      error,
+    }
+  })

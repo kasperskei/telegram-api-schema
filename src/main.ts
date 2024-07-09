@@ -1,69 +1,178 @@
-import {parseHTML} from 'linkedom'
-import {getSchema, getSchemaConstructor} from '@/schemaGenerator/api.ts'
-import {parseTgUserApiSchema} from '@/schemaGenerator/parsers/parseTgUserApiSchema.ts'
-import {parseTgUserApiSchemaConstructors} from '@/schemaGenerator/parsers/parseTgUserApiSchemaConstructors.ts'
-import {parseTgUserApiSchemaMethod} from '@/schemaGenerator/parsers/parseTgUserApiSchemaMethod.ts'
-import {parseTgUserApiSchemaConstructor} from '@/schemaGenerator/parsers/parseTgUserApiSchemaConstructor.ts'
+import {
+  getHtmlPage,
+  getSchema,
+} from '@/schemaGenerator/api.ts'
+import {
+  parseTgUserApiSchema,
+} from '@/schemaGenerator/parsers/parseTgUserApiSchema.ts'
+import {
+  parseTgUserApiHtmlPage,
+} from '@/schemaGenerator/parsers/parseTgUserApiHtmlPage.ts'
+import {
+  type TgUserApiSchema,
+} from '@/schemaGenerator/types/TgUserApiSchema.ts'
+import schema from './schema.json'
 
-const main = async () => {
+const writeSchema = async () => {
   const schemaDto = await getSchema()
   const schema = parseTgUserApiSchema(schemaDto)
 
-  // console.log(schema.constructors.findIndex((x) => x.predicate === 'updateChannelViewForumAsMessages'))
-
-  const constructorsDto = await Promise.all(schema.constructors
-    .slice(1164, 1165)
-    .map(async (constructor) => {
-      const constructorDto = await getSchemaConstructor(constructor.predicate)
-      const {description, params} = parseTgUserApiSchemaConstructor(constructorDto)
+  await Promise.all([
+    ...schema.constructors.map(async (constructor) => {
+      const constructorDto = await getHtmlPage(constructor.link)
+      const {description, params} = parseTgUserApiHtmlPage(constructorDto)
 
       constructor.description = description
       constructor.params.forEach((param) => {
         param.description = params[param.propName] ?? ''
       })
+    }),
+    ...schema.methods.map(async (method) => {
+      const methodDto = await getHtmlPage(method.link)
+      const {description, params} = parseTgUserApiHtmlPage(methodDto)
 
-      return constructor
-    }))
+      method.description = description
+      method.params.forEach((param) => {
+        param.description = params[param.propName] ?? ''
+      })
+    }),
+  ])
 
-  console.log(JSON.stringify(constructorsDto, null, 2))
+  await Bun.write(
+    './dist/schema.json',
+    JSON.stringify(schema, undefined, 2),
+  )
 
-  // const rewriter = new HTMLRewriter()
+  return schema
+}
 
-  // rewriter.on('#dev_page_content', {
-  //   element: (element) => {
-  //     console.log(element.tagName, element.getAttribute('id'))
-  //     // element
-  //   },
-  // })
+const writeTypes = async (schema: TgUserApiSchema) => {
+  const tab = '  '
+  const tabbed = (rows: string[]): string[] => rows.map((row) => tab + row)
 
-  // console.log(rewriter.transform(new Response(constructorsDto[0]!)).text())
+  const constructorType = [
+    'export type Constructor =',
+    ...tabbed(schema.constructors.map((constructor) => '| ' + constructor.typeName)),
+  ].join('\n')
 
-  // const html = await getSchemaConstructor('updateChannelViewForumAsMessages')
-  // const {document} = parseHTML(html)
+  const constructorMapType = [
+    'export interface ConstructorMap {',
+    ...tabbed(schema.constructors.map((constructor) => `'${constructor.predicate}': ${constructor.typeName}`)),
+    '}',
+  ].join('\n')
 
-  // const content = document.querySelector('#dev_page_content')!
-  // content.querySelector('dev_page_content')?.remove()
+  const constructorsTypes = schema.constructors
+    .map((constructor) => {
+      return [
+        `/**`,
+        ` * ${constructor.description}`,
+        ` * @see ${constructor.link}`,
+        ` */`,
+        `export interface ${constructor.typeName} {`,
+        ...tabbed([
+          `_: '${constructor.predicate}'`,
+          ...constructor.params.flatMap((param) => [
+            `/** ${param.description} */`,
+            `${param.propName}${param.isMaybe ? '?' : ''}: ${param.typeName}`,
+          ]),
+        ]),
+        `}`,
+      ].join('\n')
+    }).join('\n\n')
 
-  // content.querySelectorAll('a').forEach((anchor) => {
-  //   anchor.href = 'https://core.telegram.org' + anchor.href
-  // })
+  const groupConstructorsTypes = Object.entries(Object.groupBy(schema.constructors, (constructor) => constructor.groupTypeName))
+    .map(([groupTypeName, constructors]) => [
+      `export type ${groupTypeName} =`,
+      ...tabbed(constructors!.map((it) => '| ' + it.typeName)),
+    ].join('\n')).join('\n\n')
 
-  // const description = turndownService.turndown(content.children.item(0)?.innerHTML ?? '')
-  // const params = Object.fromEntries(Array.from(content.querySelector('#parameters')
-  //   ?.parentElement
-  //   ?.nextElementSibling
-  //   ?.querySelector('tbody')
-  //   ?.querySelectorAll('tr')
-  //   ?.values() ?? []
-  // ).map((tr) => [
-  //   tr.children.item(0)?.textContent,
-  //   tr.children.item(2)?.textContent,
-  // ]))
+  const methodType = [
+    'export type Method =',
+    ...tabbed(schema.methods.map((method) => '| ' + method.methodName)),
+  ].join('\n')
 
-  // // const related = content.querySelector('#related-pages')?.parentElement?.nextElementSibling
+  const methodReturnMapType = [
+    'export interface MethodReturnMap {',
+    ...tabbed(schema.methods.map((method) => `'${method.method}': ${method.returnTypeName}`)),
+    '}',
+  ].join('\n')
 
-  // console.log(description)
-  // console.log(params)
+  // const methodMapType = 'export interface MethodMap {' + schema.methods.map((method) => `\n${tab}'${method.method}': ${method.methodName}`).join('') + '\n}'
+
+  const methodsTypes = schema.methods
+    .map((method) => {
+      return [
+        `/**`,
+        ` * ${method.description}`,
+        ` * @see ${method.link}`,
+        ` */`,
+        `export interface ${method.methodName} {`,
+        `${tab}_: '${method.method}'`,
+        ...method.params.flatMap((param) => [
+          `/** ${param.description} */`,
+          `${param.propName}${param.isMaybe ? '?' : ''}: ${param.typeName}`,
+        ]).map((row) => tab + row),
+        `}`,
+      ].join(`\n`)
+    }).join(`\n\n`)
+
+  const createMethodType = [
+    'export interface CreateMethod {',
+    tabbed(schema.methods.flatMap((method) => [
+      `/**`,
+      ` * ${method.description}`,
+      ` * @see ${method.link}`,
+      ` */`,
+      `(method: '${method.method}'): (params: ${method.methodName}) => Promise<${method.returnTypeName}>`,
+    ])),
+    '}',
+  ].flat().join('\n')
+
+  // const executeMethodType = [
+  //   'export interface ExecuteMethod {',
+  //   ...tabbed(schema.methods.flatMap((method) => [
+  //     `/**`,
+  //     ` * ${method.description}`,
+  //     ` * @see ${method.link}`,
+  //     ` */`,
+  //     `(method: ${method.methodName}): Promise<${method.returnTypeName}>`,
+  //     // `(method: {_: '${method.method}'} & ${method.methodName}): Promise<${method.returnTypeName}>`,
+  //   ])),
+  //   '}',
+  // ].join('\n')
+
+  const executeMethodType = `export type ExecuteMethod = <T extends Method>(method: T) => MethodReturnMap[T['_']]`
+
+  const result = [
+    constructorType,
+    constructorMapType,
+    constructorsTypes,
+    groupConstructorsTypes,
+    methodType,
+    // methodMapType,
+    methodReturnMapType,
+    methodsTypes,
+    createMethodType,
+    executeMethodType,
+  ].join('\n\n')
+
+  await Bun.write(
+    './dist/schema.ts',
+    result,
+  )
+}
+
+const main = async () => {
+  // const schema = await writeSchema()
+  await writeTypes(schema)
 }
 
 await main()
+
+import {messagesReceivedMessages, Method, type CreateMethod, type ExecuteMethod} from '../dist/schema.ts'
+
+const createMethod = (() => {}) as unknown as CreateMethod
+const executeMethod = (() => {}) as unknown as ExecuteMethod
+
+const method: messagesReceivedMessages = {_: 'messages.receivedMessages', max_id: 123}
+const response = await executeMethod(method)

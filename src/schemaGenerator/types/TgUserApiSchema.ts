@@ -10,6 +10,7 @@ export interface TgUserApiSchemaConstructor {
   predicate: string
   typeName: string
   groupTypeName: string
+  link: string
 }
 export interface TgUserApiSchemaMethod {
   description: string
@@ -17,9 +18,9 @@ export interface TgUserApiSchemaMethod {
   method: string
   methodName: string
   returnTypeName: string
+  link: string
 }
 export interface TgUserApiSchema {
   constructors: TgUserApiSchemaConstructor[]
-  constructorsByType: Record<any, TgUserApiSchemaConstructor[]>
   methods: TgUserApiSchemaMethod[]
 }

@@ -1,7 +1,18 @@
-import {TgUserApiJSONSchemaConstructor} from '@/schemaGenerator/types/TgUserApiJSONSchema.ts'
-import {TgUserApiSchemaConstructor} from '@/schemaGenerator/types/TgUserApiSchema.ts'
-import {parseTgUserApiSchemaParams} from '@/schemaGenerator/parsers/parseTgUserApiSchemaParams.ts'
-import {parseTgUserApiTypeName} from '@/schemaGenerator/parsers/parseTgUserApiTypeName.ts'
+import {
+  type TgUserApiJSONSchemaConstructor,
+} from '@/schemaGenerator/types/TgUserApiJSONSchema.ts'
+import {
+  type TgUserApiSchemaConstructor,
+} from '@/schemaGenerator/types/TgUserApiSchema.ts'
+import {
+  parseTgUserApiSchemaParams,
+} from '@/schemaGenerator/parsers/parseTgUserApiSchemaParams.ts'
+import {
+  parseTgUserApiTypeName,
+} from '@/schemaGenerator/parsers/parseTgUserApiTypeName.ts'
+import {
+  basePath,
+} from '@/schemaGenerator/api.ts'
 
 const TgUserApiSchemaExcludePredicates = [
   'boolFalse',
@@ -19,4 +30,5 @@ export const parseTgUserApiSchemaConstructors = (constructors: TgUserApiJSONSche
     predicate: it.predicate,
     typeName: parseTgUserApiTypeName(`predicate_${it.predicate}`).typeName,
     groupTypeName: parseTgUserApiTypeName(it.type).typeName,
+    link: basePath + '/constructor/' + it.predicate,
   }))

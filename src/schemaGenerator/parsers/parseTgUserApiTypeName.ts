@@ -1,4 +1,6 @@
-import {snakeToCamelCase} from '@/utils/string/snakeToCamelCase.ts'
+import {
+  snakeToCamelCase,
+} from '@/utils/string/snakeToCamelCase.ts'
 
 const BaseTypeByName: Record<string, string> = {
   int: 'number',
@@ -9,8 +11,8 @@ const BaseTypeByName: Record<string, string> = {
   null: 'undefined',
   true: 'true',
   bool: 'boolean',
-  x: 'any',
-  '!x': 'any',
+  x: 'unknown',
+  '!x': 'unknown',
 }
 
 export const parseTgUserApiTypeName = (type: string, isUpperFirstChar = true) => {

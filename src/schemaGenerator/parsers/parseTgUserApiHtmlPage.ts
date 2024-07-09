@@ -1,16 +1,21 @@
-import {parseHTML} from 'linkedom'
+import {
+  parseHTML,
+} from 'linkedom'
 import Turndown from 'turndown'
+import {
+  basePath,
+} from '@/schemaGenerator/api.ts'
 
 const turndownService = new Turndown()
 
-export const parseTgUserApiSchemaConstructor = (html: string) => {
+export const parseTgUserApiHtmlPage = (html: string) => {
   const {document} = parseHTML(html)
 
   const content = document.querySelector('#dev_page_content')!
   content.querySelector('dev_page_content')?.remove()
 
   content.querySelectorAll('a').forEach((anchor) => {
-    anchor.href = 'https://core.telegram.org' + anchor.href
+    anchor.href = basePath + anchor.href
   })
 
   const description = turndownService.turndown(content.children.item(0)?.innerHTML ?? '')
