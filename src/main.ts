@@ -1,69 +1,83 @@
 import {
+  Schema,
+} from '@/domain.ts'
+import {
   getHtmlPage,
   getSchema,
 } from '@/api/index.ts'
-import {
-  type TgUserApiSchema,
-} from '@/schemaGenerator/types/TgUserApiSchema.ts'
 
-const writeSchema = async () => {
+const main = async () => {
+  const schema = await buildSchema()
+  const types = await buildTypes(schema)
+  await Promise.all([
+    writeSchema(schema),
+    writeTypes(types),
+  ])
+}
+
+const buildSchema = async () => {
   const schema = await getSchema()
 
   await Promise.all([
     ...schema.constructors.map(async (constructor) => {
-      const {description, params} = await getHtmlPage(constructor.link)
+      const {description, params} = await getHtmlPage(constructor.source)
 
       constructor.description = description
       constructor.params.forEach((param) => {
-        param.description = params[param.propName] ?? ''
+        param.description = params[param.name] ?? ''
       })
     }),
     ...schema.methods.map(async (method) => {
-      const {description, params} = await getHtmlPage(method.link)
+      const {description, params} = await getHtmlPage(method.source)
 
       method.description = description
       method.params.forEach((param) => {
-        param.description = params[param.propName] ?? ''
+        param.description = params[param.name] ?? ''
       })
     }),
   ])
 
+  return schema
+}
+
+const writeSchema = async (schema: Schema) => {
   await Bun.write(
     './lib/schema.json',
     JSON.stringify(schema, undefined, 2),
   )
-
-  return schema
 }
 
-const writeTypes = async (schema: TgUserApiSchema) => {
+const buildTypes = async (schema: Schema) => {
   const tab = '  '
   const tabbed = (rows: string[]): string[] => rows.map((row) => tab + row)
+  const compare = (left: string, right: string): number => left.localeCompare(right)
+  const sort = (rows: string[]): string[] => rows.sort(compare)
 
   const constructorType = [
     'export type Constructor =',
-    ...tabbed(schema.constructors.map((constructor) => '| ' + constructor.typeName)),
+    ...tabbed(sort(schema.constructors.map((constructor) => '| ' + constructor.typeName))),
   ].join('\n')
 
   const constructorMapType = [
     'export interface ConstructorMap {',
-    ...tabbed(schema.constructors.map((constructor) => `'${constructor.predicate}': ${constructor.typeName}`)),
+    ...tabbed(sort(schema.constructors.map((constructor) => `'${constructor.name}': ${constructor.typeName}`))),
     '}',
   ].join('\n')
 
   const constructorsTypes = schema.constructors
+    .sort((left, right) => compare(left.typeName, right.typeName))
     .map((constructor) => {
       return [
         `/**`,
         ` * ${constructor.description}`,
-        ` * @see ${constructor.link}`,
+        ` * @see ${constructor.source}`,
         ` */`,
         `export interface ${constructor.typeName} {`,
         ...tabbed([
-          `_: '${constructor.predicate}'`,
-          ...constructor.params.flatMap((param) => [
+          `_: '${constructor.name}'`,
+          ...constructor.params.sort((left, right) => compare(left.name, right.name)).flatMap((param) => [
             `/** ${param.description} */`,
-            `${param.propName}${param.isMaybe ? '?' : ''}: ${param.typeName}`,
+            `${param.name}${param.isOptional ? '?' : ''}: ${param.typeName}`,
           ]),
         ]),
         `}`,
@@ -73,47 +87,50 @@ const writeTypes = async (schema: TgUserApiSchema) => {
   const groupConstructorsTypes = Object.entries(Object.groupBy(schema.constructors, (constructor) => constructor.groupTypeName))
     .map(([groupTypeName, constructors]) => [
       `export type ${groupTypeName} =`,
-      ...tabbed(constructors!.map((it) => '| ' + it.typeName)),
+      ...tabbed(sort(constructors!.map((it) => '| ' + it.typeName))),
     ].join('\n')).join('\n\n')
 
   const methodType = [
     'export type Method =',
-    ...tabbed(schema.methods.map((method) => '| ' + method.methodName)),
+    ...tabbed(sort(schema.methods.map((method) => '| ' + method.typeName))),
   ].join('\n')
 
   const methodReturnMapType = [
     'export interface MethodReturnMap {',
-    ...tabbed(schema.methods.map((method) => `'${method.method}': ${method.returnTypeName}`)),
+    ...tabbed(sort(schema.methods.map((method) => `'${method.name}': ${method.returnTypeName}`))),
     '}',
   ].join('\n')
 
-  // const methodMapType = 'export interface MethodMap {' + schema.methods.map((method) => `\n${tab}'${method.method}': ${method.methodName}`).join('') + '\n}'
+  // const methodMapType = 'export interface MethodMap {' + schema.methods.map((method) => `\n${tab}'${method.method}': ${method.typeName}`).join('') + '\n}'
 
   const methodsTypes = schema.methods
+    .sort((left, right) => compare(left.typeName, right.typeName))
     .map((method) => {
       return [
         `/**`,
         ` * ${method.description}`,
-        ` * @see ${method.link}`,
+        ` * @see ${method.source}`,
         ` */`,
-        `export interface ${method.methodName} {`,
-        `${tab}_: '${method.method}'`,
-        ...method.params.flatMap((param) => [
-          `/** ${param.description} */`,
-          `${param.propName}${param.isMaybe ? '?' : ''}: ${param.typeName}`,
-        ]).map((row) => tab + row),
+        `export interface ${method.typeName} {`,
+        ...tabbed([
+          `_: '${method.name}'`,
+          ...method.params.sort((left, right) => compare(left.name, right.name)).flatMap((param) => [
+            `/** ${param.description} */`,
+            `${param.name}${param.isOptional ? '?' : ''}: ${param.typeName}`,
+          ]),
+        ]),
         `}`,
       ].join(`\n`)
     }).join(`\n\n`)
 
   const createMethodType = [
     'export interface CreateMethod {',
-    tabbed(schema.methods.flatMap((method) => [
+    tabbed(schema.methods.sort((left, right) => compare(left.name, right.name)).flatMap((method) => [
       `/**`,
       ` * ${method.description}`,
-      ` * @see ${method.link}`,
+      ` * @see ${method.source}`,
       ` */`,
-      `(method: '${method.method}'): (params: ${method.methodName}) => Promise<${method.returnTypeName}>`,
+      `(method: '${method.name}'): (params: ${method.typeName}) => Promise<${method.returnTypeName}>`,
     ])),
     '}',
   ].flat().join('\n')
@@ -125,15 +142,15 @@ const writeTypes = async (schema: TgUserApiSchema) => {
   //     ` * ${method.description}`,
   //     ` * @see ${method.link}`,
   //     ` */`,
-  //     `(method: ${method.methodName}): Promise<${method.returnTypeName}>`,
-  //     // `(method: {_: '${method.method}'} & ${method.methodName}): Promise<${method.returnTypeName}>`,
+  //     `(method: ${method.typeName}): Promise<${method.returnTypeName}>`,
+  //     // `(method: {_: '${method.method}'} & ${method.typeName}): Promise<${method.returnTypeName}>`,
   //   ])),
   //   '}',
   // ].join('\n')
 
   const executeMethodType = `export type ExecuteMethod = <T extends Method>(method: T) => MethodReturnMap[T['_']]`
 
-  const result = [
+  const types = [
     constructorType,
     constructorMapType,
     constructorsTypes,
@@ -146,15 +163,14 @@ const writeTypes = async (schema: TgUserApiSchema) => {
     executeMethodType,
   ].join('\n\n')
 
-  await Bun.write(
-    './lib/schema.ts',
-    result,
-  )
+  return types
 }
 
-const main = async () => {
-  const schema = await writeSchema()
-  await writeTypes(schema)
+const writeTypes = async (types: string) => {
+  await Bun.write(
+    './lib/schema.ts',
+    types,
+  )
 }
 
 await main()

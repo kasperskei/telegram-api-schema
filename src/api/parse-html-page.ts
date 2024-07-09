@@ -4,7 +4,7 @@ import {
 import Turndown from 'turndown'
 import {
   basePath,
-} from '@/schemaGenerator/api.ts'
+} from '@/api/index.ts'
 
 const turndownService = new Turndown()
 
