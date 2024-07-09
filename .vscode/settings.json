@@ -1,0 +1,20 @@
+{
+	"cSpell.language": "en,ru",
+  "cSpell.words": [
+    "bunx",
+  ],
+	"editor.detectIndentation": false,
+  "editor.insertSpaces": true,
+	"editor.tabSize": 2,
+	"files.eol": "\n",
+	"files.insertFinalNewline": true,
+	"files.trimFinalNewlines": true,
+	"files.trimTrailingWhitespace": true,
+	"npm.packageManager": "bun",
+	"typescript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces": false,
+	"typescript.format.semicolons": "remove",
+	"typescript.preferences.importModuleSpecifier": "non-relative",
+	"typescript.preferences.quoteStyle": "single",
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"typescript.validate.enable": true,
+}

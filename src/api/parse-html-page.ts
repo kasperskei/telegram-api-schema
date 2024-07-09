@@ -8,7 +8,7 @@ import {
 
 const turndownService = new Turndown()
 
-export const parseTgUserApiHtmlPage = (html: string) => {
+export const parseHtmlPage = (html: string) => {
   const {document} = parseHTML(html)
 
   const content = document.querySelector('#dev_page_content')!

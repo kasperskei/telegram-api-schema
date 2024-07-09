@@ -1,26 +1,17 @@
 import {
   getHtmlPage,
   getSchema,
-} from '@/schemaGenerator/api.ts'
-import {
-  parseTgUserApiSchema,
-} from '@/schemaGenerator/parsers/parseTgUserApiSchema.ts'
-import {
-  parseTgUserApiHtmlPage,
-} from '@/schemaGenerator/parsers/parseTgUserApiHtmlPage.ts'
+} from '@/api/index.ts'
 import {
   type TgUserApiSchema,
 } from '@/schemaGenerator/types/TgUserApiSchema.ts'
-import schema from './schema.json'
 
 const writeSchema = async () => {
-  const schemaDto = await getSchema()
-  const schema = parseTgUserApiSchema(schemaDto)
+  const schema = await getSchema()
 
   await Promise.all([
     ...schema.constructors.map(async (constructor) => {
-      const constructorDto = await getHtmlPage(constructor.link)
-      const {description, params} = parseTgUserApiHtmlPage(constructorDto)
+      const {description, params} = await getHtmlPage(constructor.link)
 
       constructor.description = description
       constructor.params.forEach((param) => {
@@ -28,8 +19,7 @@ const writeSchema = async () => {
       })
     }),
     ...schema.methods.map(async (method) => {
-      const methodDto = await getHtmlPage(method.link)
-      const {description, params} = parseTgUserApiHtmlPage(methodDto)
+      const {description, params} = await getHtmlPage(method.link)
 
       method.description = description
       method.params.forEach((param) => {
@@ -39,7 +29,7 @@ const writeSchema = async () => {
   ])
 
   await Bun.write(
-    './dist/schema.json',
+    './lib/schema.json',
     JSON.stringify(schema, undefined, 2),
   )
 
@@ -157,22 +147,14 @@ const writeTypes = async (schema: TgUserApiSchema) => {
   ].join('\n\n')
 
   await Bun.write(
-    './dist/schema.ts',
+    './lib/schema.ts',
     result,
   )
 }
 
 const main = async () => {
-  // const schema = await writeSchema()
+  const schema = await writeSchema()
   await writeTypes(schema)
 }
 
 await main()
-
-import {messagesReceivedMessages, Method, type CreateMethod, type ExecuteMethod} from '../dist/schema.ts'
-
-const createMethod = (() => {}) as unknown as CreateMethod
-const executeMethod = (() => {}) as unknown as ExecuteMethod
-
-const method: messagesReceivedMessages = {_: 'messages.receivedMessages', max_id: 123}
-const response = await executeMethod(method)
