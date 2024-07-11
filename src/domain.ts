@@ -1,5 +1,6 @@
 export interface Schema {
   constructors: SchemaConstructor[]
+  errors: SchemaError[]
   methods: SchemaMethod[]
 }
 
@@ -24,6 +25,14 @@ export interface SchemaMethod {
 export interface SchemaParam {
   description: string
   isOptional: boolean
+  name: string
+  typeName: string
+}
+
+export interface SchemaError {
+  code: number
+  description: string
+  methods: string[]
   name: string
   typeName: string
 }

@@ -38,6 +38,7 @@ interface SchemaDto {
 export const parseSchema = (schema: SchemaDto): Schema => {
   return {
     constructors: parseSchemaConstructors(schema.constructors),
+    errors: [],
     methods: parseSchemaMethods(schema.methods),
   }
 }
@@ -100,7 +101,7 @@ const BaseTypeByName: Record<string, string> = {
   '!x': 'unknown',
 }
 
-export const parseSchemaTypeName = (type: string) => {
+const parseSchemaTypeName = (type: string) => {
   const [, flagNum, flagType] = type.match(/^flags([0-9]+)?.[0-9]+\?(.*)/) ?? []
   const [, vectorType] = type.match(/Vector<(.+)>/) ?? []
 

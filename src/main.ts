@@ -2,6 +2,7 @@ import {
   Schema,
 } from '@/domain.ts'
 import {
+  getErrors,
   getHtmlPage,
   getSchema,
 } from '@/api/index.ts'
@@ -16,7 +17,20 @@ const main = async () => {
 }
 
 const buildSchema = async () => {
-  const schema = await getSchema()
+  const [schema, errors] = await Promise.all([
+    getSchema(),
+    getErrors(),
+  ])
+
+  schema.errors = errors
+
+  errors.forEach((error) => {
+    schema.methods.forEach((method) => {
+      if (error.methods.includes(method.name)) {
+        method.returnTypeName += ' | ' + error.typeName
+      }
+    })
+  })
 
   await Promise.all([
     ...schema.constructors.map(async (constructor) => {
@@ -90,6 +104,32 @@ const buildTypes = async (schema: Schema) => {
       ...tabbed(sort(constructors!.map((it) => '| ' + it.typeName))),
     ].join('\n')).join('\n\n')
 
+  const errorBaseType = [
+    'export interface ErrorBase {',
+    ...tabbed([
+      `_: 'mt_rpc_error'`,
+      `error_code: number`,
+      `error_message: string`,
+    ]),
+    '}',
+  ].join('\n')
+
+  const errorsTypes = schema.errors
+    .sort((left, right) => compare(left.typeName, right.typeName))
+    .map((error) => {
+      return [
+        `/**`,
+        ` * ${error.description}`,
+        ` */`,
+        `export interface ${error.typeName} extends ErrorBase {`,
+        ...tabbed([
+          `error_code: ${error.code}`,
+          `error_message: \`${error.name}\``,
+        ]),
+        `}`,
+      ].join('\n')
+    }).join('\n\n')
+
   const methodType = [
     'export type Method =',
     ...tabbed(sort(schema.methods.map((method) => '| ' + method.typeName))),
@@ -148,13 +188,15 @@ const buildTypes = async (schema: Schema) => {
   //   '}',
   // ].join('\n')
 
-  const executeMethodType = `export type ExecuteMethod = <T extends Method>(method: T) => MethodReturnMap[T['_']]`
+  const executeMethodType = `export type ExecuteMethod = <T extends Method>(method: T) => Promise<MethodReturnMap[T['_']]>`
 
   const types = [
     constructorType,
     constructorMapType,
     constructorsTypes,
     groupConstructorsTypes,
+    errorBaseType,
+    errorsTypes,
     methodType,
     // methodMapType,
     methodReturnMapType,
