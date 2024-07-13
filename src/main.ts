@@ -163,17 +163,17 @@ const buildTypes = async (schema: Schema) => {
       ].join(`\n`)
     }).join(`\n\n`)
 
-  const createMethodType = [
-    'export interface CreateMethod {',
-    tabbed(schema.methods.sort((left, right) => compare(left.name, right.name)).flatMap((method) => [
-      `/**`,
-      ` * ${method.description}`,
-      ` * @see ${method.source}`,
-      ` */`,
-      `(method: '${method.name}'): (params: ${method.typeName}) => Promise<${method.returnTypeName}>`,
-    ])),
-    '}',
-  ].flat().join('\n')
+  // const createMethodType = [
+  //   'export interface CreateMethod {',
+  //   tabbed(schema.methods.sort((left, right) => compare(left.name, right.name)).flatMap((method) => [
+  //     `/**`,
+  //     ` * ${method.description}`,
+  //     ` * @see ${method.source}`,
+  //     ` */`,
+  //     `(method: '${method.name}'): (params: ${method.typeName}) => Promise<${method.returnTypeName}>`,
+  //   ])),
+  //   '}',
+  // ].flat().join('\n')
 
   // const executeMethodType = [
   //   'export interface ExecuteMethod {',
@@ -201,7 +201,7 @@ const buildTypes = async (schema: Schema) => {
     // methodMapType,
     methodReturnMapType,
     methodsTypes,
-    createMethodType,
+    // createMethodType,
     executeMethodType,
   ].join('\n\n')
 

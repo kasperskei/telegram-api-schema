@@ -18,7 +18,9 @@ export const parseHtmlPage = (html: string) => {
     anchor.href = basePath + anchor.href
   })
 
-  const description = turndownService.turndown(content.children.item(0)?.innerHTML ?? '')
+  const description = turndownService
+    .turndown(content.children.item(0)?.innerHTML ?? '')
+    .replace('DEPRECATED', '@deprecated')
   const params = Object.fromEntries(Array.from(content.querySelector('#parameters')
     ?.parentElement
     ?.nextElementSibling
@@ -27,7 +29,8 @@ export const parseHtmlPage = (html: string) => {
     ?.values() ?? []
   ).map((tr) => [
     tr.children.item(0)?.textContent,
-    tr.children.item(2)?.textContent,
+    tr.children.item(2)?.textContent
+      ?.replace('Deprecated', '@deprecated'),
   ]))
 
   // const related = content.querySelector('#related-pages')?.parentElement?.nextElementSibling
